@@ -59,19 +59,18 @@
         </div>
 
         <div id="section-effect" class="hidden">
-            <div class="alert alert-primary small">실천한 일을 체크하고 점수(1~10)를 매겨보세요!</div>
-            <div id="effectList" class="record-list">
-                </div>
+            <div class="alert alert-primary small">실천한 일을 체크하고 점수(1~5점)를 매겨보세요!</div>
+            <div id="effectList" class="record-list"></div>
         </div>
     </div>
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwDikmeAdpE0X5UqMKRPewUF9EWLq3vBclY3l1mUNCYpGvmgaWhTg6FtpT9vbf35RA1dw/exec";
+    // ⚠️ 이미 배포하신 URL이 적용되어 있습니다.
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzw-VWTlIDDROPYQpfbj6JXOofR5US3k1Ev4b1ZBXrIyZZrvviLI2gQ7W4zDpxWhkRR2w/exec";
 
     let currentRecords = [];
 
-    // 로그인
     async function login() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
@@ -93,7 +92,6 @@
         } catch (e) { alert("연동 오류!"); }
     }
 
-    // 탭 전환
     function showTab(tab) {
         if(tab === 'write') {
             document.getElementById('section-write').classList.remove('hidden');
@@ -109,7 +107,6 @@
         }
     }
 
-    // 기록 출력
     function displayRecords() {
         const listDiv = document.getElementById('recordList');
         listDiv.innerHTML = currentRecords.length ? "" : "<p class='text-center small py-3'>기록이 없습니다.</p>";
@@ -117,12 +114,13 @@
             const div = document.createElement('div');
             div.className = 'record-item';
             div.innerHTML = `<div class="small text-muted">${item.date}</div>
-                             <strong>할일:</strong> ${item.action}`;
+                             <div class="mb-1"><strong>고민:</strong> ${item.issue}</div>
+                             <strong>할일:</strong> ${item.action} 
+                             ${item.score ? `<span class="score-badge">${item.score}점</span>` : ''}`;
             listDiv.appendChild(div);
         });
     }
 
-    // 효과성 체크리스트 출력
     function displayEffectList() {
         const listDiv = document.getElementById('effectList');
         listDiv.innerHTML = "";
@@ -134,7 +132,7 @@
                 <div class="small text-muted mb-1">${item.date}</div>
                 <div class="fw-bold mb-2">실천: ${item.action}</div>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="number" id="score-${index}" class="form-control form-control-sm" style="width:70px" min="1" max="10" placeholder="점수">
+                    <input type="number" id="score-${index}" class="form-control form-control-sm" style="width:70px" min="1" max="5" value="${item.score || ''}" placeholder="1~5">
                     <button onclick="saveScore('${item.action}', ${index})" class="btn btn-sm btn-primary">평가완료</button>
                 </div>
             `;
@@ -142,26 +140,57 @@
         });
     }
 
-    // 점수 저장
     async function saveScore(actionText, idx) {
         const score = document.getElementById(`score-${idx}`).value;
         const id = document.getElementById('userId').value;
-        if(!score) return alert("점수를 입력하세요.");
+        const pw = document.getElementById('userPw').value;
+        if(!score || score < 1 || score > 5) return alert("1~5점 사이로 입력하세요.");
 
         try {
-            const response = await fetch(GAS_URL, {
+            await fetch(GAS_URL, {
                 method: 'POST',
-                body: JSON.stringify({ id, action: actionText, score: score, type: 'updateScore' })
+                mode: 'no-cors',
+                body: JSON.stringify({ id, pw, action: actionText, score: score, type: 'updateScore' })
             });
-            const result = await response.json();
-            if(result.success) alert("점수가 반영되었습니다!");
+            alert("점수가 전송되었습니다! (잠시 후 반영됩니다)");
+            setTimeout(login, 1500); // 데이터 갱신을 위해 재로그인 로직 실행
         } catch (e) { alert("저장 실패"); }
     }
 
-    // 기록 저장 (insert)
+    // [중요] 기록 저장 함수 완성
     async function submitData() {
-        // ... (이전의 submitData 로직과 동일) ...
-        // 저장 성공 시 login() 함수를 다시 호출하여 currentRecords를 갱신하면 좋습니다.
+        const id = document.getElementById('userId').value;
+        const pw = document.getElementById('userPw').value;
+        const issue = document.getElementById('issue').value;
+        const want = document.getElementById('want').value;
+        const action = document.getElementById('action').value;
+        const saveBtn = document.getElementById('saveBtn');
+
+        if(!issue || !want || !action) return alert("내용을 모두 입력해주세요.");
+
+        saveBtn.disabled = true;
+        saveBtn.innerText = "저장 중...";
+
+        try {
+            await fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ id, pw, issue, want, action, type: 'insert' })
+            });
+            
+            alert("기록이 전송되었습니다!");
+            document.getElementById('issue').value = "";
+            document.getElementById('want').value = "";
+            document.getElementById('action').value = "";
+            
+            // 데이터 갱신
+            setTimeout(login, 1500);
+        } catch (e) {
+            alert("통신 오류가 발생했습니다.");
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "저장하기";
+        }
     }
 </script>
 
