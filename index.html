@@ -28,7 +28,7 @@
             <label class="form-label fw-bold">비밀번호</label>
             <input type="password" id="userPw" class="form-control form-control-lg">
         </div>
-        <button onclick="login()" id="loginBtn" class="btn btn-primary btn-lg w-100">접속하기</button>
+        <button onclick="login()" class="btn btn-primary btn-lg w-100">접속하기</button>
     </div>
 
     <div id="page-main" class="hidden">
@@ -66,19 +66,17 @@
 </div>
 
 <script>
-    // ⚠️ 이미 배포하신 URL이 적용되어 있습니다.
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzw-VWTlIDDROPYQpfbj6JXOofR5US3k1Ev4b1ZBXrIyZZrvviLI2gQ7W4zDpxWhkRR2w/exec";
-
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzmVGC2LkAUtM98slidiuLEfKtj7c7w9dcxqGi_U3vrepptP0YA8buVEzm9y4_PC3pFvQ/exec";
     let currentRecords = [];
 
     async function login() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
-        if(!id || !pw) return alert("정보를 입력하세요.");
+        if (!id || !pw) return alert("정보를 입력하세요.");
 
         try {
-            const response = await fetch(`${GAS_URL}?id=${id}&pw=${pw}&type=select`);
-            const data = await response.json();
+            const res = await fetch(`${GAS_URL}?type=select&id=${encodeURIComponent(id)}&pw=${encodeURIComponent(pw)}`);
+            const data = await res.json();
             if (data.error) {
                 alert("인증 실패!");
             } else {
@@ -93,7 +91,7 @@
     }
 
     function showTab(tab) {
-        if(tab === 'write') {
+        if (tab === 'write') {
             document.getElementById('section-write').classList.remove('hidden');
             document.getElementById('section-effect').classList.add('hidden');
             document.getElementById('tab-write').classList.add('active');
@@ -103,7 +101,6 @@
             document.getElementById('section-effect').classList.remove('hidden');
             document.getElementById('tab-write').classList.remove('active');
             document.getElementById('tab-effect').classList.add('active');
-            displayEffectList();
         }
     }
 
@@ -115,7 +112,7 @@
             div.className = 'record-item';
             div.innerHTML = `<div class="small text-muted">${item.date}</div>
                              <div class="mb-1"><strong>고민:</strong> ${item.issue}</div>
-                             <strong>할일:</strong> ${item.action} 
+                             <strong>할일:</strong> ${item.action}
                              ${item.score ? `<span class="score-badge">${item.score}점</span>` : ''}`;
             listDiv.appendChild(div);
         });
@@ -124,7 +121,6 @@
     function displayEffectList() {
         const listDiv = document.getElementById('effectList');
         listDiv.innerHTML = "";
-        
         currentRecords.forEach((item, index) => {
             const div = document.createElement('div');
             div.className = 'record-item';
@@ -134,30 +130,12 @@
                 <div class="d-flex align-items-center gap-2">
                     <input type="number" id="score-${index}" class="form-control form-control-sm" style="width:70px" min="1" max="5" value="${item.score || ''}" placeholder="1~5">
                     <button onclick="saveScore('${item.action}', ${index})" class="btn btn-sm btn-primary">평가완료</button>
-                </div>
-            `;
+                </div>`;
             listDiv.appendChild(div);
         });
     }
 
-    async function saveScore(actionText, idx) {
-        const score = document.getElementById(`score-${idx}`).value;
-        const id = document.getElementById('userId').value;
-        const pw = document.getElementById('userPw').value;
-        if(!score || score < 1 || score > 5) return alert("1~5점 사이로 입력하세요.");
-
-        try {
-            await fetch(GAS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ id, pw, action: actionText, score: score, type: 'updateScore' })
-            });
-            alert("점수가 전송되었습니다! (잠시 후 반영됩니다)");
-            setTimeout(login, 1500); // 데이터 갱신을 위해 재로그인 로직 실행
-        } catch (e) { alert("저장 실패"); }
-    }
-
-    // [중요] 기록 저장 함수 완성
+    // ✅ GET 방식으로 변경
     async function submitData() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
@@ -166,25 +144,25 @@
         const action = document.getElementById('action').value;
         const saveBtn = document.getElementById('saveBtn');
 
-        if(!issue || !want || !action) return alert("내용을 모두 입력해주세요.");
+        if (!issue || !want || !action) return alert("내용을 모두 입력해주세요.");
 
         saveBtn.disabled = true;
         saveBtn.innerText = "저장 중...";
 
         try {
-            await fetch(GAS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ id, pw, issue, want, action, type: 'insert' })
-            });
-            
-            alert("기록이 전송되었습니다!");
-            document.getElementById('issue').value = "";
-            document.getElementById('want').value = "";
-            document.getElementById('action').value = "";
-            
-            // 데이터 갱신
-            setTimeout(login, 1500);
+            const url = `${GAS_URL}?type=insert&id=${encodeURIComponent(id)}&pw=${encodeURIComponent(pw)}&issue=${encodeURIComponent(issue)}&want=${encodeURIComponent(want)}&action=${encodeURIComponent(action)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success) {
+                alert("기록이 저장되었습니다! ✅");
+                document.getElementById('issue').value = "";
+                document.getElementById('want').value = "";
+                document.getElementById('action').value = "";
+                setTimeout(login, 500);
+            } else {
+                alert("저장 실패. 다시 시도해주세요.");
+            }
         } catch (e) {
             alert("통신 오류가 발생했습니다.");
         } finally {
@@ -192,7 +170,27 @@
             saveBtn.innerText = "저장하기";
         }
     }
-</script>
 
+    // ✅ GET 방식으로 변경
+    async function saveScore(actionText, idx) {
+        const score = document.getElementById(`score-${idx}`).value;
+        const id = document.getElementById('userId').value;
+        const pw = document.getElementById('userPw').value;
+        if (!score || score < 1 || score > 5) return alert("1~5점 사이로 입력하세요.");
+
+        try {
+            const url = `${GAS_URL}?type=updateScore&id=${encodeURIComponent(id)}&pw=${encodeURIComponent(pw)}&action=${encodeURIComponent(actionText)}&score=${encodeURIComponent(score)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success) {
+                alert("점수가 저장되었습니다! ✅");
+                setTimeout(login, 500);
+            } else {
+                alert("점수 저장 실패.");
+            }
+        } catch (e) { alert("저장 실패"); }
+    }
+</script>
 </body>
 </html>
