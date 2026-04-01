@@ -6,140 +6,159 @@
     <title>AI 사회정서 동아리</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; padding: 20px; }
-        .container { max-width: 600px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .record-list { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 10px; background: #fafafa; }
-        .record-item { border-bottom: 1px solid #eee; padding: 12px 0; }
-        .record-item:last-child { border-bottom: none; }
-        .loading { display: none; color: #666; font-size: 0.9em; }
+        body { background-color: #f8f9fa; padding: 20px; font-family: 'Pretendard', sans-serif; }
+        .container { max-width: 550px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .hidden { display: none; }
+        .record-list { max-height: 350px; overflow-y: auto; margin-top: 15px; border: 1px solid #eee; padding: 10px; border-radius: 10px; background: #fdfdfd; }
+        .record-item { background: white; border: 1px solid #eee; border-left: 5px solid #0d6efd; margin-bottom: 10px; padding: 15px; border-radius: 8px; }
+        .btn-lg { border-radius: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container mt-4">
     <h2 class="text-center mb-4">🧠 AI 사회정서 동아리</h2>
-    
-    <div id="login-section" class="card p-3 mb-4">
+
+    <div id="page-login">
+        <div class="text-center mb-4 text-muted">등록된 정보를 입력하여 접속하세요.</div>
         <div class="mb-3">
             <label class="form-label fw-bold">이름(또는 학번)</label>
-            <input type="text" id="userId" class="form-control" placeholder="명단에 등록된 이름을 입력하세요">
+            <input type="text" id="userId" class="form-control form-control-lg" placeholder="이름을 입력하세요">
         </div>
-        <div class="mb-3">
+        <div class="mb-4">
             <label class="form-label fw-bold">비밀번호</label>
-            <input type="password" id="userPw" class="form-control" placeholder="비밀번호를 입력하세요">
+            <input type="password" id="userPw" class="form-control form-control-lg" placeholder="비밀번호를 입력하세요">
         </div>
-        <button onclick="loadMyRecords()" id="loadBtn" class="btn btn-primary w-100">내 기록 불러오기</button>
+        <button onclick="login()" id="loginBtn" class="btn btn-primary btn-lg w-100">내 기록 확인하러 가기</button>
     </div>
 
-    <div id="input-section" class="mb-4">
-        <div class="mb-3">
-            <label class="form-label fw-bold">1. 나의 현재 고민</label>
-            <textarea id="issue" class="form-control" rows="2"></textarea>
+    <div id="page-main" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0 fw-bold"><span id="displayName" class="text-primary"></span>님의 페이지</h5>
+            <button onclick="location.reload()" class="btn btn-sm btn-outline-danger">로그아웃</button>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">2. 무엇을 원하는지</label>
-            <textarea id="want" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">3. 내가 지금 뭘 해야하는지</label>
-            <textarea id="action" class="form-control" rows="2"></textarea>
-        </div>
-        <button onclick="submitData()" id="saveBtn" class="btn btn-success w-100">기록 저장하기</button>
-        <div id="saveStatus" class="loading text-center mt-2">처리 중...</div>
-    </div>
 
-    <hr class="my-4">
+        <div class="card p-3 mb-4 border-0 bg-light">
+            <div class="mb-3">
+                <label class="form-label fw-bold small">1. 나의 현재 고민</label>
+                <textarea id="issue" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold small">2. 무엇을 원하는지</label>
+                <textarea id="want" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold small">3. 내가 지금 뭘 해야하는지</label>
+                <textarea id="action" class="form-control" rows="2"></textarea>
+            </div>
+            <button onclick="submitData()" id="saveBtn" class="btn btn-success w-100">오늘의 기록 저장하기</button>
+        </div>
 
-    <h4 class="fw-bold">나의 기록 목록</h4>
-    <div id="recordList" class="record-list">
-        <p class="text-muted text-center">아이디와 비번 입력 후 '불러오기'를 눌러주세요.</p>
+        <h6 class="fw-bold">이전 나의 기록</h6>
+        <div id="recordList" class="record-list">
+            <p class="text-center text-muted small">기록을 불러오는 중...</p>
+        </div>
     </div>
 </div>
 
 <script>
-    // ⚠️ Google Apps Script 배포 URL을 여기에 붙여넣으세요.
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzbuizCsnlvrOga-UrVlTRjDXMiN-BuTNTuR1-MElVbMzKdDLD7wAn9XBR6O1GiDmdz7g/exec";
+    // ⚠️ 수정하신 Apps Script URL이 정상적으로 들어가 있습니다.
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyJ_E9mbTmVpjK65FfktoKqXciNY2mpFOrns52c1ktTLr5C_9Fk6REYEDykicHFSM5ZgA/exec";
 
-    // 1. 데이터 저장 함수
+    // 로그인 및 데이터 불러오기
+    async function login() {
+        const id = document.getElementById('userId').value;
+        const pw = document.getElementById('userPw').value;
+        const loginBtn = document.getElementById('loginBtn');
+
+        if(!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
+
+        loginBtn.disabled = true;
+        loginBtn.innerText = "인증 및 데이터 로딩 중...";
+
+        try {
+            const response = await fetch(`${GAS_URL}?id=${id}&pw=${pw}&type=select`);
+            const data = await response.json();
+
+            if (data.error) {
+                alert("인증에 실패했습니다. 정보를 확인하세요.");
+                loginBtn.disabled = false;
+                loginBtn.innerText = "내 기록 확인하러 가기";
+            } else {
+                // 로그인 성공 시 화면 전환
+                document.getElementById('page-login').classList.add('hidden');
+                document.getElementById('page-main').classList.remove('hidden');
+                document.getElementById('displayName').innerText = id;
+                displayRecords(data);
+            }
+        } catch (e) {
+            alert("연동 오류가 발생했습니다. Apps Script 배포 설정을 확인하세요.");
+            loginBtn.disabled = false;
+            loginBtn.innerText = "내 기록 확인하러 가기";
+        }
+    }
+
+    // 기록 저장
     async function submitData() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
         const issue = document.getElementById('issue').value;
         const want = document.getElementById('want').value;
         const action = document.getElementById('action').value;
-        const status = document.getElementById('saveStatus');
+        const saveBtn = document.getElementById('saveBtn');
 
-        if(!id || !pw) return alert("상단의 이름과 비밀번호를 먼저 입력해주세요.");
-        if(!issue || !want || !action) return alert("모든 항목을 입력해주세요.");
+        if(!issue || !want || !action) return alert("내용을 모두 입력해주세요.");
 
-        status.style.display = "block";
-        
+        saveBtn.disabled = true;
+        saveBtn.innerText = "저장 중...";
+
         try {
             const response = await fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({ id, pw, issue, want, action, type: 'insert' })
             });
-            
             const result = await response.json();
+            
             if(result.success) {
                 alert("기록이 저장되었습니다!");
-                // 입력창 초기화
                 document.getElementById('issue').value = "";
                 document.getElementById('want').value = "";
                 document.getElementById('action').value = "";
-                loadMyRecords(); // 목록 새로고침
-            } else {
-                alert(result.message || "오류가 발생했습니다.");
+                
+                // 저장 후 최신 목록 다시 불러오기
+                const refreshResp = await fetch(`${GAS_URL}?id=${id}&pw=${pw}&type=select`);
+                const refreshedData = await refreshResp.json();
+                displayRecords(refreshedData);
             }
         } catch (e) {
-            alert("연동 실패! URL이나 명단 시트를 확인하세요.");
+            alert("저장에 실패했습니다.");
         } finally {
-            status.style.display = "none";
+            saveBtn.disabled = false;
+            saveBtn.innerText = "오늘의 기록 저장하기";
         }
     }
 
-    // 2. 과거 기록 불러오기 함수
-    async function loadMyRecords() {
-        const id = document.getElementById('userId').value;
-        const pw = document.getElementById('userPw').value;
-        const loadBtn = document.getElementById('loadBtn');
-        
-        if(!id || !pw) return alert("이름과 비밀번호를 입력해주세요.");
+    // 화면에 기록 뿌려주기
+    function displayRecords(records) {
+        const listDiv = document.getElementById('recordList');
+        listDiv.innerHTML = "";
 
-        loadBtn.disabled = true;
-        loadBtn.innerText = "불러오는 중...";
-
-        try {
-            const response = await fetch(`${GAS_URL}?id=${id}&pw=${pw}&type=select`);
-            const records = await response.json();
-
-            const listDiv = document.getElementById('recordList');
-            listDiv.innerHTML = "";
-
-            if(records.error) {
-                alert("인증에 실패했습니다. ID와 비번을 확인하세요.");
-                listDiv.innerHTML = "<p class='text-center text-danger'>인증 실패</p>";
-            } else if(records.length === 0) {
-                listDiv.innerHTML = "<p class='text-center'>등록된 기록이 없습니다.</p>";
-            } else {
-                records.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'record-item';
-                    div.innerHTML = `
-                        <small class="text-primary fw-bold">${item.date}</small><br>
-                        <strong>고민:</strong> ${item.issue}<br>
-                        <strong>희망:</strong> ${item.want}<br>
-                        <strong>할일:</strong> ${item.action}
-                    `;
-                    listDiv.appendChild(div);
-                });
-            }
-        } catch (e) {
-            alert("데이터를 가져오지 못했습니다.");
-        } finally {
-            loadBtn.disabled = false;
-            loadBtn.innerText = "내 기록 확인하기";
+        if(records.length === 0) {
+            listDiv.innerHTML = "<p class='text-center text-muted small mt-3'>기록이 없습니다. 첫 기록을 남겨보세요!</p>";
+            return;
         }
+
+        records.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'record-item';
+            div.innerHTML = `
+                <div class="small text-muted mb-2">${item.date}</div>
+                <div class="mb-1"><strong>고민:</strong> ${item.issue}</div>
+                <div class="mb-1"><strong>원함:</strong> ${item.want}</div>
+                <div><strong>할일:</strong> ${item.action}</div>
+            `;
+            listDiv.appendChild(div);
+        });
     }
 </script>
 
